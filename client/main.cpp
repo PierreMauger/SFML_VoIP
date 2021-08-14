@@ -18,7 +18,7 @@ bool connectToServer(sf::TcpSocket *socket, sf::IpAddress ip)
 
 int main(void)
 {
-    sf::RenderWindow window(sf::VideoMode(800, 600), "SFML PlayBack");
+    sf::RenderWindow window(sf::VideoMode(800, 600), "SFML NetworkRecorder");
     sf::Packet receivePacket;
     sf::Event event;
     sf::IpAddress ip = sf::IpAddress::getLocalAddress();
@@ -37,14 +37,17 @@ int main(void)
             if (event.type == sf::Event::Closed)
                 window.close();
             if (event.type == sf::Event::KeyPressed) {
-                if (input.isRunning())
+                if (input.isRunning()) {
+                    std::cout << "Listening and recording..." << std::endl;
                     input.stop();
-                else
+                }
+                else {
+                    std::cout << "Stopped." << std::endl;
                     input.start();
+                }
             }
         }
         if (input.socket.receive(receivePacket) == sf::Socket::Done) {
-            std::cout << "You got a packet." << std::endl;
             input.receiveData(receivePacket);
             receivePacket.clear();
         }

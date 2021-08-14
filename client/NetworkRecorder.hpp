@@ -23,10 +23,11 @@ class NetworkRecorder : private sf::SoundRecorder, private sf::SoundStream {
 public:
 
     sf::TcpSocket socket;
+
     void start() {
         sf::SoundRecorder::start();
-
         sf::SoundStream::initialize(sf::SoundRecorder::getChannelCount(), sf::SoundRecorder::getSampleRate());
+
         sf::SoundStream::play();
     }
 
@@ -37,7 +38,6 @@ public:
 
     void receiveData(sf::Packet receivePacket) {
         {
-            data.empty();
             std::lock_guard<std::mutex> lock(mutex);
             const sf::Int16* samples = reinterpret_cast<const sf::Int16*>(static_cast<const char*>(receivePacket.getData()));
             std::size_t sampleCount = (receivePacket.getDataSize()) / sizeof(sf::Int16);
@@ -69,14 +69,17 @@ protected:
 
     bool onStart() override {
         isRecording = true;
+        std::queue<Samples> empty;
+        data.swap(empty);
         return true;
     }
 
     void onStop() override {
         isRecording = false;
         cv.notify_one();
+        std::queue<Samples> empty;
+        data.swap(empty);
     }
-
 
 protected:
 

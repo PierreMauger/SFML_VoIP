@@ -23,7 +23,7 @@ void listenToSocket(sf::SocketSelector *selector, std::vector<sf::TcpSocket *>*c
     for (int i = 0; i < clients->size(); i++) {
         if (selector->isReady(*(*clients)[i])) {
             if ((*clients)[i]->receive(receivePacket) == sf::Socket::Done) {
-                std::cout << i << ", received a packet! Sending it to everyone..." << receivePacket.getDataSize() << std::endl;
+                std::cout << "User " << i << " sent a packet! Sending it to everyone..." << receivePacket.getDataSize() << std::endl;
                 for (int j = 0; j < clients->size(); j++)
                     if (i != j)
                         (*clients)[j]->send(receivePacket);
