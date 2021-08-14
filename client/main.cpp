@@ -16,6 +16,15 @@ bool connectToServer(sf::TcpSocket *socket, sf::IpAddress ip)
     return true;
 }
 
+void sendDisconnection(sf::TcpSocket *socket)
+{
+    sf::Packet sendPacket;
+    int status = 1;
+
+    sendPacket << status;
+    socket->send(sendPacket);
+}
+
 int main(void)
 {
     sf::RenderWindow window(sf::VideoMode(800, 600), "SFML NetworkRecorder");
@@ -37,13 +46,17 @@ int main(void)
             if (event.type == sf::Event::Closed)
                 window.close();
             if (event.type == sf::Event::KeyPressed) {
-                if (input.isRunning()) {
-                    std::cout << "Listening and recording..." << std::endl;
-                    input.stop();
-                }
-                else {
-                    std::cout << "Stopped." << std::endl;
-                    input.start();
+                if (event.key.code == sf::Keyboard::O)
+                    input.mute();
+                if (event.key.code == sf::Keyboard::S) {
+                    if (input.isRunning()) {
+                        std::cout << "Listening and recording..." << std::endl;
+                        input.stop();
+                    }
+                    else {
+                        std::cout << "Stopped." << std::endl;
+                        input.start();
+                    }
                 }
             }
         }
@@ -55,5 +68,6 @@ int main(void)
         window.display();
     }
 
+    sendDisconnection(&input.socket);
     return EXIT_SUCCESS;
 }

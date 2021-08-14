@@ -39,10 +39,14 @@ public:
     void receiveData(sf::Packet receivePacket) {
         {
             std::lock_guard<std::mutex> lock(mutex);
-            const sf::Int16* samples = reinterpret_cast<const sf::Int16*>(static_cast<const char*>(receivePacket.getData()));
-            std::size_t sampleCount = (receivePacket.getDataSize()) / sizeof(sf::Int16);
+            const sf::Int16* samples = reinterpret_cast<const sf::Int16*>(static_cast<const char*>(receivePacket.getData()) + sizeof(int));
+            std::size_t sampleCount = (receivePacket.getDataSize() - sizeof(int)) / sizeof(sf::Int16);
             data.emplace(samples, sampleCount);
         }
+    }
+
+    void mute() {
+        isMuted = !isMuted;
     }
 
     bool isRunning() {
@@ -56,13 +60,18 @@ public:
 protected:
 
     bool onProcessSamples(sf::Int16 const* samples, std::size_t sampleCount) override {
+        int status = 0;
+        //      to hear yourself
         // {
             // std::lock_guard<std::mutex> lock(mutex);
             // data.emplace(samples, sampleCount);
         // }
-        packet.clear();
-        packet.append(samples, sampleCount * sizeof(sf::Int16));
-        socket.send(packet);
+        if (!isMuted) {
+            packet.clear();
+            packet << status;
+            packet.append(samples, sampleCount * sizeof(sf::Int16));
+            socket.send(packet);
+        }
         cv.notify_one();
         return true;
     }
@@ -84,15 +93,11 @@ protected:
 protected:
 
     bool onGetData(Chunk& chunk) override {
-        // Wait until either:
-        //  a) the recording was stopped
-        //  b) new data is available
         std::unique_lock<std::mutex> lock(mutex);
         cv.wait(lock, [this]{ return !isRecording || !data.empty(); });
 
-        // Lock was acquired, examine which case we're into:
         if (!isRecording)
-            return false; // stop playing.
+            return false;
         else {
             assert(!data.empty());
 
@@ -108,9 +113,10 @@ protected:
 
 private:
     std::atomic<bool> isRecording{false};
+    bool isMuted = false;
     std::mutex mutex; // protects `data`
     std::condition_variable cv; // notify consumer thread of new samples
     std::queue<Samples> data; // samples come in from the recorder, and popped by the output stream
     Samples playingSamples; // used by the output stream.
-    sf::Packet packet;
+    sf::Packet packet; // packet sended to server
 };

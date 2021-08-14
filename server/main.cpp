@@ -19,14 +19,20 @@ void listenToConnection(sf::TcpListener *listener, sf::SocketSelector *selector,
 void listenToSocket(sf::SocketSelector *selector, std::vector<sf::TcpSocket *>*clients)
 {
     sf::Packet receivePacket;
+    int status = 0;
 
     for (int i = 0; i < clients->size(); i++) {
         if (selector->isReady(*(*clients)[i])) {
             if ((*clients)[i]->receive(receivePacket) == sf::Socket::Done) {
-                std::cout << "User " << i << " sent a packet! Sending it to everyone..." << receivePacket.getDataSize() << std::endl;
-                for (int j = 0; j < clients->size(); j++)
+                receivePacket >> status;
+                // std::cout << "User " << i << " sent a packet! Sending it to everyone..." << receivePacket.getDataSize() << std::endl;
+                for (int j = 0; j < clients->size(); j++)   // send to everyone else but the sender
                     if (i != j)
                         (*clients)[j]->send(receivePacket);
+                if (status == 1) {                          // delete user from server memory
+                    selector->remove(*(*clients)[i]);
+                    clients->erase(clients->begin() + i);
+                }
             }
         }
     }
